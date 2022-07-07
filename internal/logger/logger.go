@@ -2,6 +2,7 @@ package logger
 
 import (
 	"io"
+	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -113,6 +114,20 @@ func NewLog(writer io.Writer, level Level) *Logger {
 		panic("the writer is nil")
 	}
 	config := zap.NewProductionConfig()
+
+	//自定義修改時間
+	const logTmFmtWithMS = "2006-01-02 15:04:05.000"
+	customTimeEncoder := func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+		enc.AppendString("[" + t.Format(logTmFmtWithMS) + "]")
+	}
+	config.EncoderConfig.EncodeTime = customTimeEncoder
+
+	//自定義log級別顯示
+	customLevelEncoder := func(level zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
+		enc.AppendString("[" + level.CapitalString() + "]")
+	}
+	config.EncoderConfig.EncodeLevel = customLevelEncoder
+
 	core := zapcore.NewCore(
 		zapcore.NewJSONEncoder(config.EncoderConfig), //編碼(如何寫入log file)
 		zapcore.AddSync(writer),                      //指定log寫到哪里去

@@ -31,6 +31,7 @@ func main() {
 			// }
 			if isopen {
 				logger.Info("找到漏洞", log.Int("port", ports[i]), log.Bool("open", isopen))
+				s.AttackSolution(ports[i], logger)
 			}
 		}
 	}
