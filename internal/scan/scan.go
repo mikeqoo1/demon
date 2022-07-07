@@ -25,11 +25,6 @@ func NewScan(ip string, ports string) *Scan {
 	return s
 }
 
-//CleanScan 清除物件
-func CleanScan(*Scan) {
-
-}
-
 //ParsePort 解析Port
 func (s *Scan) ParsePort(portstr string) ([]int, error) {
 	var ports []int
