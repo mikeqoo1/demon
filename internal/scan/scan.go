@@ -89,8 +89,13 @@ func (s *Scan) ParsePort(portstr string) ([]int, error) {
 			}
 		}
 	} else {
-		fmt.Println("不在分隔符號內!!!!")
-		err = errors.New("不在分隔符號內")
+		number, err = strconv.Atoi(portstr)
+		if err != nil {
+			fmt.Println("不在分隔符號內或是轉換數字錯誤:[" + portstr + "]")
+			return ports, err
+		} else {
+			ports = append(ports, number)
+		}
 	}
 
 	return ports, err
@@ -190,5 +195,7 @@ func (s *Scan) AttackSolution(port int, logger *log.Logger) {
 		logger.Warn("建議攻擊方式", log.String("服務名稱", "memcacache"), log.String("攻擊方式", "未授權防問"))
 	} else if port == 27017 {
 		logger.Warn("建議攻擊方式", log.String("服務名稱", "mongodb"), log.String("攻擊方式", "爆破/未授權防問"))
+	} else {
+		logger.Warn("建議攻擊方式", log.String("服務名稱", "未知的服務"), log.String("攻擊方式", "未知的攻擊手段"))
 	}
 }
