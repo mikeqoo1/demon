@@ -14,13 +14,14 @@ func main() {
 	}
 	logger := log.NewLog(file, log.InfoLevel)
 
-	ip := "192.168.199.235"
-	port_str := "1~65534"
+	ip := "192.168.199.123"
+	port_str := "3306"
 	// port_str := "3306~3308"
 	// port_str := "3306-3308"
 	// port_str := "3306,3308"
 	// port_str := "3306|3308"
 	var ports []int
+	var openPort []int
 	var err error
 	var isopen bool
 	s := scan.NewScan(ip, port_str)
@@ -41,10 +42,15 @@ func main() {
 			} else {
 				if isopen {
 					logger.Info("找到漏洞", log.Int("port", ports[i]), log.Bool("open", isopen))
-					s.AttackSolution(ports[i], logger)
+					s.PossibleVulnerability(ports[i], logger)
+					openPort = append(openPort, ports[i])
 				}
 			}
 		}
 	}
 
+	//分析開啟的Ports決定要不要試著攻擊
+	for i := 0; i < len(openPort); i++ {
+		s.AttackSolution(ports[i], logger)
+	}
 }
