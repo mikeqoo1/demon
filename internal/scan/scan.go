@@ -1,6 +1,7 @@
 package scan
 
 import (
+	db "demon/internal/dblib"
 	log "demon/internal/logger"
 	"errors"
 	"fmt"
@@ -126,7 +127,31 @@ func (s *Scan) CheckPortOpen(ip string, port int) (bool, error) {
 	return true, err
 }
 
-func (s *Scan) AttackSolution(port int, logger *log.Logger) {
+func (s *Scan) AllPortScan(ip string, port int, results chan int) {
+	network := "tcp"
+	portstr := strconv.Itoa(port)
+	address := ip + ":" + portstr
+	var timeout time.Duration = 500 * time.Millisecond
+try:
+	conn, err := net.DialTimeout(network, address, timeout)
+	if err != nil {
+		if strings.Contains(err.Error(), "too many open files") || strings.Contains(err.Error(), "time out") {
+			time.Sleep(timeout)
+			goto try
+		} else {
+			//fmt.Println(port, "closed")
+			results <- 0
+			return
+		}
+	}
+
+	//fmt.Printf("Port %d is open\n", port)
+	conn.Close()
+	results <- port
+}
+
+//PossibleVulnerability 紀錄漏洞
+func (s *Scan) PossibleVulnerability(port int, logger *log.Logger) {
 	if port == 21 || port == 69 {
 		logger.Warn("建議攻擊方式", log.String("服務名稱", "ftp/sftp文件傳輸協議"), log.String("攻擊方式", "爆破/監聽/Buffer Overflow/後門"))
 	} else if port == 22 {
@@ -198,4 +223,37 @@ func (s *Scan) AttackSolution(port int, logger *log.Logger) {
 	} else {
 		logger.Warn("建議攻擊方式", log.String("服務名稱", "未知的服務"), log.String("攻擊方式", "未知的攻擊手段"))
 	}
+}
+
+//AttackSolution 攻擊漏洞的方法
+func (s *Scan) AttackSolution(port int, logger *log.Logger) {
+	if port == 3306 {
+		sql(s.ip)
+	} else {
+		logger.Info("還沒實做該漏洞的攻擊手段", log.Int("Port", port))
+		fmt.Println("還沒實做該漏洞的攻擊手段", port)
+	}
+}
+
+func sql(ip string) {
+	mydb := db.NewMysql(ip)
+	var connectionString string
+	mydb.User = "root"
+	mydb.Passwd = "Aa1234"
+	mydb.Ip = ip
+	mydb.Port = 3306
+	mydb.Database = "mysql"
+	//<username>:<pw>@tcp(<HOST>:<port>)/<dbname>"
+	connectionString = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?allowNativePasswords=true", mydb.User, mydb.Passwd, mydb.Ip, mydb.Port, mydb.Database)
+	err := mydb.DBOpen(connectionString)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	err = mydb.Ping() //如果想立即驗證連線 需要用Ping()方法
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	//假設連成功紀錄帳密
+	fmt.Println("成功的帳號:", mydb.User, "成功的密碼:", mydb.Passwd)
+	defer mydb.Close()
 }
