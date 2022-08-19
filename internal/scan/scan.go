@@ -127,6 +127,29 @@ func (s *Scan) CheckPortOpen(ip string, port int) (bool, error) {
 	return true, err
 }
 
+func (s *Scan) AllPortScan(ip string, port int, results chan int) {
+	network := "tcp"
+	portstr := strconv.Itoa(port)
+	address := ip + ":" + portstr
+	var timeout time.Duration = 500 * time.Millisecond
+try:
+	conn, err := net.DialTimeout(network, address, timeout)
+	if err != nil {
+		if strings.Contains(err.Error(), "too many open files") || strings.Contains(err.Error(), "time out") {
+			time.Sleep(timeout)
+			goto try
+		} else {
+			//fmt.Println(port, "closed")
+			results <- 0
+			return
+		}
+	}
+
+	//fmt.Printf("Port %d is open\n", port)
+	conn.Close()
+	results <- port
+}
+
 //PossibleVulnerability 紀錄漏洞
 func (s *Scan) PossibleVulnerability(port int, logger *log.Logger) {
 	if port == 21 || port == 69 {
