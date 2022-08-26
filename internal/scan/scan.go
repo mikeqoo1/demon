@@ -227,19 +227,14 @@ func (s *Scan) PossibleVulnerability(port int, logger *log.Logger) {
 
 //AttackSolution 攻擊漏洞的方法
 func (s *Scan) AttackSolution(port int, logger *log.Logger) {
-	if port == 3306 {
-		sql(s.ip)
-	} else {
-		logger.Info("還沒實做該漏洞的攻擊手段", log.Int("Port", port))
-		fmt.Println("還沒實做該漏洞的攻擊手段", port)
-	}
+	//待實做
 }
 
 func sql(ip string) {
 	mydb := db.NewMysql(ip)
 	var connectionString string
 	mydb.User = "root"
-	mydb.Passwd = "Aa1234"
+	mydb.Passwd = "1234"
 	mydb.Ip = ip
 	mydb.Port = 3306
 	mydb.Database = "mysql"
