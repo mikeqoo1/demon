@@ -64,13 +64,4 @@ func main() {
 			s.PossibleVulnerability(port, logger)
 		}
 	}
-
-	//分析開啟的Ports決定要不要試著攻擊
-
-	//黑客攻擊技巧-反向shell
-	/*
-		Server端要獨立放在被駭的機器上, 再啟動Client執行終端機指令
-	*/
-	scan.ReverseShellClient()
-
 }

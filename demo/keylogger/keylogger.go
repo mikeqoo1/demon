@@ -27,6 +27,11 @@ func main() {
 		}
 	}
 
+
+	//SERVER
+
+	//.....
+
 	/*非同步方法
 	keysEvents, err := keyboard.GetKeys(10)
 	if err != nil {
