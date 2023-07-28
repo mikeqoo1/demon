@@ -13,7 +13,7 @@ func main() {
 		panic(fileerr)
 	}
 	logger := log.NewLog(file, log.InfoLevel)
-	ip := "192.168.199.235"
+	ip := "192.168.101.124"
 	port_str := "1~65535"
 	s := scan.NewScan(ip, port_str)
 	/*

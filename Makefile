@@ -2,7 +2,7 @@ SCAN=Scan.out
 REVERSEServer=Reserver.out
 REVERSEClient=Reclient.out
 KEYBOARD=Keylog.out
-
+BOOM=Boom.out
 
 .PHONY: build clean install help
 
@@ -11,6 +11,7 @@ build:
 	go build -o bin/${REVERSEServer} demo/reverse/re_server/ReverseShellServer.go
 	go build -o bin/${REVERSEClient} demo/reverse/re_client/ReverseShellClient.go
 	go build -o bin/${KEYBOARD} demo/keylogger/keylogger.go
+	go build -o bin/${BOOM} demo/sshBoom/main.go
 
 install:
 	go install
@@ -20,6 +21,7 @@ clean:
 	if [ -f bin/${REVERSEServer} ] ; then rm bin/${REVERSEServer} ; fi
 	if [ -f bin/${REVERSEClient} ] ; then rm bin/${REVERSEClient} ; fi
 	if [ -f bin/${KEYBOARD} ] ; then rm bin/${KEYBOARD} ; fi
+	if [ -f bin/${BOOM} ] ; then rm bin/${BOOM} ; fi
 
 help:
 	@echo "make 格式化"

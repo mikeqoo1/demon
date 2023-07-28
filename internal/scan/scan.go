@@ -225,11 +225,6 @@ func (s *Scan) PossibleVulnerability(port int, logger *log.Logger) {
 	}
 }
 
-//AttackSolution 攻擊漏洞的方法
-func (s *Scan) AttackSolution(port int, logger *log.Logger) {
-
-}
-
 func sql(ip string) {
 	mydb := db.NewMysql(ip)
 	var connectionString string
