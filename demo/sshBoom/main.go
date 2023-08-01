@@ -4,9 +4,9 @@ import (
 	"demon/internal/attack"
 	"demon/internal/help"
 	log "demon/internal/logger"
-	"sync"
-
 	"os"
+	"runtime/pprof"
+	"sync"
 )
 
 type Task struct {
@@ -38,6 +38,16 @@ func runTask(tasks []Task, threads int, logger *log.Logger) {
 }
 
 func main() {
+	//Get cpu profile
+	cpuFile, _ := os.OpenFile("cpu.prof", os.O_CREATE|os.O_RDWR, 0644)
+	defer cpuFile.Close()
+	pprof.StartCPUProfile(cpuFile)
+	defer pprof.StopCPUProfile()
+	//Get memory profile
+	memFile, _ := os.OpenFile("memory.prof", os.O_CREATE|os.O_RDWR, 0644)
+	defer memFile.Close()
+	pprof.WriteHeapProfile(memFile)
+
 	file, fileerr := os.OpenFile("./log/demon.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if fileerr != nil {
 		panic(fileerr)
