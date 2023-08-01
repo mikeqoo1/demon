@@ -1,4 +1,4 @@
 root
-admmin
+admin
 netadmin
 crcft
