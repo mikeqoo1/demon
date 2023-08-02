@@ -4,6 +4,7 @@ import (
 	"demon/internal/attack"
 	"demon/internal/help"
 	log "demon/internal/logger"
+	"fmt"
 	"os"
 	"runtime/pprof"
 	"sync"
@@ -23,6 +24,7 @@ func runTask(tasks []Task, threads int, logger *log.Logger) {
 			for task := range taskCh {
 				success, _ := attack.SSHLogin(task.ip, task.user, task.password)
 				if success {
+					fmt.Println("中大獎了!!! IP=", task.ip, "帳號=", task.user, "密碼=", task.password)
 					logger.Info("破解成功", log.String("IP is", task.ip), log.String("User is", task.user), log.String("Password is", task.password))
 				}
 				wg.Done()
