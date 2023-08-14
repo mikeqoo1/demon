@@ -70,3 +70,9 @@ func SSHLogin(ip, username, password string) (bool, error) {
 	}
 	return success, err
 }
+
+// SQL 注入攻擊
+func SQLinjection() {
+	//https://blog.csdn.net/weixin_45100742/article/details/130165374
+	//還是用工具[sqlmap]就好
+}
