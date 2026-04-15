@@ -17,6 +17,162 @@ type Scan struct {
 	port string //要驗證的端口 (範例:80 or 80,81 or 80-83 or 80~85 or 80|81|82)
 }
 
+// VulnInfo 漏洞資訊結構
+type VulnInfo struct {
+	Port         int
+	Service      string
+	AttackMethod string
+	RiskLevel    string // 嚴重, 高, 中, 低
+}
+
+// GetVulnerabilityInfo 回傳結構化的漏洞資訊
+func (s *Scan) GetVulnerabilityInfo(port int) VulnInfo {
+	info := VulnInfo{Port: port}
+	switch port {
+	case 21, 69:
+		info.Service = "ftp/sftp文件傳輸協議"
+		info.AttackMethod = "爆破/監聽/Buffer Overflow/後門"
+		info.RiskLevel = "高"
+	case 22:
+		info.Service = "ssh"
+		info.AttackMethod = "爆破OpenSSH/內網代理轉發/文件傳輸"
+		info.RiskLevel = "高"
+	case 23:
+		info.Service = "telnet"
+		info.AttackMethod = "爆破/監聽"
+		info.RiskLevel = "嚴重"
+	case 25:
+		info.Service = "smtp郵件服務"
+		info.AttackMethod = "郵件偽造"
+		info.RiskLevel = "中"
+	case 53:
+		info.Service = "DNS域名系統"
+		info.AttackMethod = "DNS區域傳輸/DNS劫持/DNS污染/DNS欺騙/利用DNS隧道技術刺透防火牆"
+		info.RiskLevel = "高"
+	case 67, 68:
+		info.Service = "dhcp"
+		info.AttackMethod = "劫持/欺騙"
+		info.RiskLevel = "中"
+	case 110:
+		info.Service = "pop3"
+		info.AttackMethod = "爆破"
+		info.RiskLevel = "中"
+	case 139:
+		info.Service = "samba"
+		info.AttackMethod = "爆破/未授權存取/遠程代碼執行"
+		info.RiskLevel = "嚴重"
+	case 143:
+		info.Service = "imap"
+		info.AttackMethod = "爆破"
+		info.RiskLevel = "中"
+	case 161:
+		info.Service = "snmp"
+		info.AttackMethod = "爆破"
+		info.RiskLevel = "中"
+	case 389:
+		info.Service = "ldap"
+		info.AttackMethod = "注入攻擊/未授權存取"
+		info.RiskLevel = "高"
+	case 512, 513, 514:
+		info.Service = "linux rlogin"
+		info.AttackMethod = "遠端登入rlogin"
+		info.RiskLevel = "嚴重"
+	case 873:
+		info.Service = "rsync"
+		info.AttackMethod = "未授權存取"
+		info.RiskLevel = "高"
+	case 1080:
+		info.Service = "socket"
+		info.AttackMethod = "爆破/內網滲透"
+		info.RiskLevel = "中"
+	case 1352:
+		info.Service = "lotus"
+		info.AttackMethod = "IBM Lotus漏洞"
+		info.RiskLevel = "中"
+	case 1433:
+		info.Service = "mssql"
+		info.AttackMethod = "爆破/使用系統用戶登入/注入攻擊"
+		info.RiskLevel = "高"
+	case 1521:
+		info.Service = "oracle"
+		info.AttackMethod = "爆破TNS/注入攻擊"
+		info.RiskLevel = "高"
+	case 2049:
+		info.Service = "nfs"
+		info.AttackMethod = "不當的配置"
+		info.RiskLevel = "中"
+	case 2181:
+		info.Service = "zookeeper"
+		info.AttackMethod = "未授權存取"
+		info.RiskLevel = "高"
+	case 3306:
+		info.Service = "mysql"
+		info.AttackMethod = "爆破/拒絕服務/注入"
+		info.RiskLevel = "高"
+	case 3389:
+		info.Service = "rdp"
+		info.AttackMethod = "爆破/Shift後門"
+		info.RiskLevel = "嚴重"
+	case 4848:
+		info.Service = "glassfish"
+		info.AttackMethod = "爆破/繞過認證"
+		info.RiskLevel = "中"
+	case 5000:
+		info.Service = "sybase/DB2"
+		info.AttackMethod = "爆破/注入"
+		info.RiskLevel = "高"
+	case 5432:
+		info.Service = "postgresql"
+		info.AttackMethod = "Buffer Overflow/注入攻擊/爆破"
+		info.RiskLevel = "高"
+	case 5632:
+		info.Service = "pcanywhere"
+		info.AttackMethod = "拒絕服務/代碼執行"
+		info.RiskLevel = "高"
+	case 5900:
+		info.Service = "vnc"
+		info.AttackMethod = "爆破/繞過認證"
+		info.RiskLevel = "高"
+	case 6379:
+		info.Service = "redis"
+		info.AttackMethod = "未授權存取/爆破"
+		info.RiskLevel = "嚴重"
+	case 7001:
+		info.Service = "weblogic"
+		info.AttackMethod = "Java反序列化/部署webshell"
+		info.RiskLevel = "嚴重"
+	case 80, 443, 8080:
+		info.Service = "web"
+		info.AttackMethod = "常見web攻擊/爆破/對應版本漏洞"
+		info.RiskLevel = "中"
+	case 8069:
+		info.Service = "zabbix"
+		info.AttackMethod = "遠程代碼執行"
+		info.RiskLevel = "嚴重"
+	case 9090:
+		info.Service = "websphere"
+		info.AttackMethod = "爆破/Java反序列化"
+		info.RiskLevel = "高"
+	case 9200, 9300:
+		info.Service = "elasticsearch"
+		info.AttackMethod = "遠程代碼執行"
+		info.RiskLevel = "嚴重"
+	case 11211:
+		info.Service = "memcached"
+		info.AttackMethod = "未授權存取"
+		info.RiskLevel = "高"
+	case 27017:
+		info.Service = "mongodb"
+		info.AttackMethod = "爆破/未授權存取"
+		info.RiskLevel = "嚴重"
+	default:
+		info.Service = "未知的服務"
+		info.AttackMethod = "未知的攻擊手段"
+		info.RiskLevel = "低"
+	}
+	return info
+}
+
 //NewScan 產生一個掃描的物件
 func NewScan(ip string, ports string) *Scan {
 	//初始化
