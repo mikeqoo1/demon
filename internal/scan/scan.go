@@ -269,7 +269,7 @@ func (s *Scan) CheckPort(port int) error {
 
 //CheckPortOpen 檢查Port是否被開啟
 func (s *Scan) CheckPortOpen(ip string, port int) (bool, error) {
-	var address string = fmt.Sprintf("%s:%d", ip, port)
+	var address string = net.JoinHostPort(ip, strconv.Itoa(port))
 	var timeout time.Duration = 100 * time.Millisecond //timeout => 100ms
 	conn, err := net.DialTimeout("tcp", address, timeout)
 	if err != nil {
