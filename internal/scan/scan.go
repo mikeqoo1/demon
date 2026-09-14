@@ -1,14 +1,14 @@
 package scan
 
 import (
-	db "demon/internal/dblib"
 	log "demon/internal/logger"
 	"errors"
 	"fmt"
 	"net"
-	"os"
+	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -173,7 +173,7 @@ func (s *Scan) GetVulnerabilityInfo(port int) VulnInfo {
 	return info
 }
 
-//NewScan 產生一個掃描的物件
+// NewScan 產生一個掃描的物件
 func NewScan(ip string, ports string) *Scan {
 	//初始化
 	s := &Scan{
@@ -183,82 +183,51 @@ func NewScan(ip string, ports string) *Scan {
 	return s
 }
 
-//ParsePort 解析Port
+// ParsePort 解析端口字串，支援 80 / 80,81 / 80|81 / 80-83 / 80~85 五種格式。
+// 任一段無法轉成數字都回錯誤，避免把壞輸入靜靜當成 port 0 送去掃描。
 func (s *Scan) ParsePort(portstr string) ([]int, error) {
-	var ports []int
-	var err error
-	var number int
-	//處理 "," "-" "~" "|" 號
-	if strings.Contains(portstr, ",") {
-		portArr := strings.Split(portstr, ",")
-		for _, v := range portArr {
-			number, err = strconv.Atoi(v)
-			ports = append(ports, number)
-		}
-	} else if strings.Contains(portstr, "|") {
-		portArr := strings.Split(portstr, "|")
-		for _, v := range portArr {
-			number, err = strconv.Atoi(v)
-			ports = append(ports, number)
-		}
-	} else if strings.Contains(portstr, "-") {
-		portArr := strings.Split(portstr, "-")
-		startPort := 0
-		endPort := 0
-		for k, v := range portArr {
-			if k == 0 {
-				number, err = strconv.Atoi(v)
-				startPort = number
-			} else if k == 1 {
-				number, err = strconv.Atoi(v)
-				endPort = number
+	portstr = strings.TrimSpace(portstr)
+
+	// 列舉：逗號或直線分隔
+	if strings.ContainsAny(portstr, ",|") {
+		var ports []int
+		fields := strings.FieldsFunc(portstr, func(r rune) bool { return r == ',' || r == '|' })
+		for _, v := range fields {
+			n, err := strconv.Atoi(strings.TrimSpace(v))
+			if err != nil {
+				return nil, fmt.Errorf("無效的端口 %q", v)
 			}
+			ports = append(ports, n)
 		}
-		if startPort >= endPort {
-			errmsg := fmt.Sprint("範圍區間有問題!!!", startPort, "-", endPort)
-			err = errors.New(errmsg)
-		} else {
-			ports = append(ports, startPort)
-			for i := 1; i <= endPort-startPort; i++ {
-				ports = append(ports, startPort+i)
-			}
-		}
-	} else if strings.Contains(portstr, "~") {
-		portArr := strings.Split(portstr, "~")
-		startPort := 0
-		endPort := 0
-		for k, v := range portArr {
-			if k == 0 {
-				number, err = strconv.Atoi(v)
-				startPort = number
-			} else if k == 1 {
-				number, err = strconv.Atoi(v)
-				endPort = number
-			}
-		}
-		if startPort >= endPort {
-			errmsg := fmt.Sprint("範圍區間有問題!!!", startPort, "~", endPort)
-			err = errors.New(errmsg)
-		} else {
-			ports = append(ports, startPort)
-			for i := 1; i <= endPort-startPort; i++ {
-				ports = append(ports, startPort+i)
-			}
-		}
-	} else {
-		number, err = strconv.Atoi(portstr)
-		if err != nil {
-			fmt.Println("不在分隔符號內或是轉換數字錯誤:[" + portstr + "]")
-			return ports, err
-		} else {
-			ports = append(ports, number)
-		}
+		return ports, nil
 	}
 
-	return ports, err
+	// 區間：- 或 ~ 分隔
+	if i := strings.IndexAny(portstr, "-~"); i >= 0 {
+		start, err1 := strconv.Atoi(strings.TrimSpace(portstr[:i]))
+		end, err2 := strconv.Atoi(strings.TrimSpace(portstr[i+1:]))
+		if err1 != nil || err2 != nil {
+			return nil, fmt.Errorf("無效的端口區間 %q", portstr)
+		}
+		if start >= end {
+			return nil, errors.New(fmt.Sprint("範圍區間有問題!!! ", start, "-", end))
+		}
+		ports := make([]int, 0, end-start+1)
+		for p := start; p <= end; p++ {
+			ports = append(ports, p)
+		}
+		return ports, nil
+	}
+
+	// 單一端口
+	n, err := strconv.Atoi(portstr)
+	if err != nil {
+		return nil, fmt.Errorf("無效的端口 %q", portstr)
+	}
+	return []int{n}, nil
 }
 
-//CheckPort 檢查Port合理性
+// CheckPort 檢查Port合理性
 func (s *Scan) CheckPort(port int) error {
 	var err error
 	if port < 1 || port > 65535 {
@@ -267,46 +236,64 @@ func (s *Scan) CheckPort(port int) error {
 	return err
 }
 
-//CheckPortOpen 檢查Port是否被開啟
+// dialTimeout 是判斷單一端口開放與否的連線逾時。
+// 太短會在較慢的網路上把開放端口誤判為關閉；太長會拖慢全端口掃描。
+// ponytail: 固定 500ms，跨網段掃描若有誤判再往上調。
+const dialTimeout = 500 * time.Millisecond
+
+// CheckPortOpen 檢查Port是否被開啟
 func (s *Scan) CheckPortOpen(ip string, port int) (bool, error) {
-	var address string = net.JoinHostPort(ip, strconv.Itoa(port))
-	var timeout time.Duration = 100 * time.Millisecond //timeout => 100ms
-	conn, err := net.DialTimeout("tcp", address, timeout)
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(ip, strconv.Itoa(port)), dialTimeout)
 	if err != nil {
-		if strings.Contains(err.Error(), "too many open files") {
-			fmt.Println("超出系統最大連線" + err.Error())
-			os.Exit(1)
-		}
 		return false, err
 	}
 	conn.Close()
-	return true, err
+	return true, nil
 }
 
-func (s *Scan) AllPortScan(ip string, port int, results chan int) {
-	network := "tcp"
-	portstr := strconv.Itoa(port)
-	address := ip + ":" + portstr
-	var timeout time.Duration = 500 * time.Millisecond
-try:
-	conn, err := net.DialTimeout(network, address, timeout)
-	if err != nil {
-		if strings.Contains(err.Error(), "too many open files") || strings.Contains(err.Error(), "time out") {
-			time.Sleep(timeout)
-			goto try
-		} else {
-			//fmt.Println(port, "closed")
-			results <- 0
-			return
-		}
+// DefaultScanWorkers 是全端口掃描預設的並行連線數，
+// 刻意壓在系統預設 fd 上限（通常 1024）之下，留餘裕給其他連線。
+const DefaultScanWorkers = 500
+
+// ScanPorts 以最多 workers 個並行連線掃描 [from,to] 區間，回傳排序後的開放端口。
+// 用有界 worker pool 取代「一次開 65535 個 goroutine」，避免耗盡檔案描述符而漏掃。
+func (s *Scan) ScanPorts(ip string, from, to, workers int) []int {
+	if workers < 1 {
+		workers = 1
 	}
-
-	//fmt.Printf("Port %d is open\n", port)
-	conn.Close()
-	results <- port
+	portsCh := make(chan int, workers)
+	openCh := make(chan int, workers)
+	var wg sync.WaitGroup
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for p := range portsCh {
+				if open, _ := s.CheckPortOpen(ip, p); open {
+					openCh <- p
+				}
+			}
+		}()
+	}
+	go func() {
+		for p := from; p <= to; p++ {
+			portsCh <- p
+		}
+		close(portsCh)
+	}()
+	go func() {
+		wg.Wait()
+		close(openCh)
+	}()
+	var open []int
+	for p := range openCh {
+		open = append(open, p)
+	}
+	sort.Ints(open)
+	return open
 }
 
-//PossibleVulnerability 紀錄漏洞
+// PossibleVulnerability 紀錄漏洞
 func (s *Scan) PossibleVulnerability(port int, logger *log.Logger) {
 	if port == 21 || port == 69 {
 		logger.Warn("建議攻擊方式", log.String("服務名稱", "ftp/sftp文件傳輸協議"), log.String("攻擊方式", "爆破/監聽/Buffer Overflow/後門"))
@@ -379,27 +366,4 @@ func (s *Scan) PossibleVulnerability(port int, logger *log.Logger) {
 	} else {
 		logger.Warn("建議攻擊方式", log.String("服務名稱", "未知的服務"), log.String("攻擊方式", "未知的攻擊手段"))
 	}
-}
-
-func sql(ip string) {
-	mydb := db.NewMysql(ip)
-	var connectionString string
-	mydb.User = "root"
-	mydb.Passwd = "1234"
-	mydb.Ip = ip
-	mydb.Port = 3306
-	mydb.Database = "mysql"
-	//<username>:<pw>@tcp(<HOST>:<port>)/<dbname>"
-	connectionString = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?allowNativePasswords=true", mydb.User, mydb.Passwd, mydb.Ip, mydb.Port, mydb.Database)
-	err := mydb.DBOpen(connectionString)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	err = mydb.Ping() //如果想立即驗證連線 需要用Ping()方法
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	//假設連成功紀錄帳密
-	fmt.Println("成功的帳號:", mydb.User, "成功的密碼:", mydb.Passwd)
-	defer mydb.Close()
 }

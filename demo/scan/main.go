@@ -51,17 +51,10 @@ func main() {
 			}
 		}
 	*/
-	//掃描全Port
-	results := make(chan int)
-	for i := 0; i <= 65535; i++ {
-		go s.AllPortScan(ip, i, results)
-	}
-
-	for j := 0; j <= 65535; j++ {
-		port := <-results
-		if port != 0 {
-			logger.Info("找到漏洞", log.Int("port", port))
-			s.PossibleVulnerability(port, logger)
-		}
+	//掃描全 Port：有界 worker pool，避免一次開 65535 個 goroutine 耗盡檔案描述符
+	openPorts := s.ScanPorts(ip, 1, 65535, scan.DefaultScanWorkers)
+	for _, port := range openPorts {
+		logger.Info("找到開放端口", log.Int("port", port))
+		s.PossibleVulnerability(port, logger)
 	}
 }
