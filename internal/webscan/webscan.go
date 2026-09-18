@@ -204,6 +204,7 @@ func (ws *WebScanner) ScanTLS() {
 		&net.Dialer{Timeout: 10 * time.Second},
 		"tcp",
 		host+":443",
+		// 刻意不驗證憑證：掃描器要能連上憑證過期/自簽的目標才能檢查其 TLS
 		&tls.Config{InsecureSkipVerify: true},
 	)
 	if err != nil {
